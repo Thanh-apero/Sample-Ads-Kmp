@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.native.cocoapods)
 }
 
 kotlin {
@@ -14,7 +15,20 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_11)
         }
     }
-
+    cocoapods {
+        ios.deploymentTarget = libs.versions.build.ios.target.deployment.get()
+        noPodspec()
+        pod("Google-Mobile-Ads-SDK") {
+            moduleName = "GoogleMobileAds"
+            version = libs.versions.cocoapods.admob.get()
+            extraOpts += listOf("-compiler-option", "-fmodules")
+        }
+        pod("GoogleUserMessagingPlatform") {
+            moduleName = "UserMessagingPlatform"
+            version = libs.versions.cocoapods.ump.get()
+            extraOpts += listOf("-compiler-option", "-fmodules")
+        }
+    }
     listOf(
         iosX64(),
         iosArm64(),
@@ -38,11 +52,15 @@ kotlin {
             implementation(compose.material)
             implementation(compose.ui)
             implementation(compose.components.resources)
-            implementation("apero-kmm:ads-admob:1.0.0")
+            implementation("apero-adkit:common-ads-sdk-admob:1.0.1"){
+                isChanging = true
+            }
         }
     }
 }
-
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor(0, "seconds")
+}
 android {
     namespace = "com.apero.kmm"
     compileSdk = 35

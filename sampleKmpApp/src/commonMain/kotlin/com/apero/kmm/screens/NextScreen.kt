@@ -17,10 +17,29 @@ import androidx.compose.ui.unit.sp
 fun NextScreen(
     onNavigateBack: () -> Unit
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Next Screen") },
+                backgroundColor = MaterialTheme.colors.primary,
+                navigationIcon = {
+                    IconButton(
+                        onClick = onNavigateBack
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White
+                        )
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(paddingValues)
                 .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -55,23 +74,6 @@ fun NextScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Go Back to Main Screen")
-            }
-        }
-
-        // Back button (replacing the navigation icon from removed topbar)
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(16.dp)
-        ) {
-            IconButton(
-                onClick = onNavigateBack
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colors.primary
-                )
             }
         }
     }

@@ -1,42 +1,70 @@
-# Apero Ads SDK - KMP Complete Guide
+# Apero Ads SDK - Sample KMP App
+
+## Tổng quan
+
+Sample KMP App là một ứng dụng mẫu sử dụng Apero Ads SDK để demo các loại quảng cáo khác nhau trên cả Android và iOS. Ứng dụng được viết bằng Kotlin Multiplatform (KMP) với Compose Multiplatform.
+
+## Cấu trúc dự án
+
+```
+sampleKmpApp/
+├── src/
+│   ├── commonMain/          # Code chung cho cả Android và iOS
+│   │   ├── kotlin/
+│   │   │   └── com/apero/kmm/
+│   │   │       ├── ads/     # Components quảng cáo cross-platform
+│   │   │       ├── screens/ # Các màn hình của ứng dụng
+│   │   │       └── navigation/ # Quản lý navigation
+│   ├── androidMain/         # Code riêng cho Android
+│   └── iosMain/            # Code riêng cho iOS
+├── build.gradle.kts
+└── README.md
+```
 
 ## 1. Khởi tạo AdMob
 
 ```kotlin
-val result = KmpAdmobAdapter.asyncInitialize()
-```
+import com.apero.sdk.ads.kmp.api.KmpAdmobAdapter
 
-**Kết quả:**
-
-- `Result<Unit>` - Success hoặc Failure
-- Cần await trong coroutine
-- Kiểm tra `result.isSuccess` hoặc `result.isFailure`
-
-**Ví dụ:**
-
-```kotlin
-scope.launch {
-    val result = KmpAdmobAdapter.asyncInitialize()
-    if (result.isSuccess) {
-        println("AdMob khởi tạo thành công")
-    } else {
-        println("Lỗi: ${result.exceptionOrNull()?.message}")
+LaunchedEffect(Unit) {
+    try {
+        val result = KmpAdmobAdapter.asyncInitialize()
+        result.fold(
+            onSuccess = {
+                println("AdMob initialized successfully")
+                // Có thể load ads sau khi khởi tạo
+            },
+            onFailure = { exception ->
+                println("AdMob initialization failed: ${exception.message}")
+            }
+        )
+    } catch (e: Exception) {
+        println("AdMob initialization error: ${e.message}")
     }
 }
 ```
 
-## 2. Banner Ad
+**Kết quả:**
+- `Result<Unit>` - Success hoặc Failure
+- Cần await trong coroutine
+- Kiểm tra `result.isSuccess` hoặc `result.isFailure`
+
+## 2. Banner Ads
 
 ### State cần khai báo:
 
 ```kotlin
+import com.apero.sdk.ads.kmp.api.composable.*
+
 val bannerAdState = rememberBannerAdState()
 ```
 
 ### Load ad:
 
 ```kotlin
-bannerAdState.loadAd()
+LaunchedEffect(Unit) {
+    bannerAdState.loadAd()
+}
 ```
 
 ### Hiển thị:
@@ -50,13 +78,11 @@ BannerAdLayout(
 ```
 
 **Các AdSize có sẵn:**
-
 - `AdSize.BANNER` - 320x50
 - `AdSize.LARGE_BANNER` - 320x100
 - `AdSize.MEDIUM_RECTANGLE` - 300x250
 
 **Các trạng thái uiState:**
-
 - `shouldShowAd` - Hiển thị ad
 - `shouldShowShimmer` - Hiển thị loading
 - `shouldShowError` - Hiển thị lỗi
@@ -72,73 +98,132 @@ fun BannerExample() {
         bannerAdState.loadAd()
     }
     
-    Column {
-        Text("Content của app")
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Content của app
+        Column {
+            Text("Content của app")
+        }
         
-        // Banner Ad
+        // Banner Ad ở bottom
         BannerAdLayout(
             adUiState = bannerAdState.uiState,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(60.dp)
-                .background(Color.LightGray),
+                .align(Alignment.BottomCenter)
+                .background(Color.LightGray.copy(alpha = 0.1f)),
             adSize = AdSize.BANNER
         )
     }
 }
 ```
 
-## 3. Native Ad
+## 3. Native Ads
 
 ### State cần khai báo:
 
 ```kotlin
+import com.apero.sdk.ads.kmp.api.composable.*
+
 val nativeAdState = rememberNativeAdState()
 ```
 
 ### Load ad:
 
 ```kotlin
-nativeAdState.loadAd()
+LaunchedEffect(Unit) {
+    nativeAdState.loadAd()
+}
 ```
 
 ### Hiển thị (Cross-platform):
+
+```kotlin
+import com.apero.kmm.ads.CrossPlatformNativeAd
+
+CrossPlatformNativeAd(nativeAdState)
+```
+
+### Hiển thị (Custom layout):
 
 ```kotlin
 PlatformAwareNativeAd(
     adUiState = nativeAdState.uiState,
     androidContent = {
         // Layout tùy chỉnh cho Android
-        Column {
-            Headline(modifier = Modifier.fillMaxWidth())
-            MediaView(modifier = Modifier.size(200.dp))
-            Body(modifier = Modifier.fillMaxWidth())
-            CallToAction(modifier = Modifier.fillMaxWidth())
+        Card(
+            modifier = Modifier.fillMaxSize(),
+            elevation = 4.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(color = Color.White)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(30.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.background(Color.Yellow).padding(4.dp)
+                    ) {
+                        Text(
+                            text = "Ad",
+                            color = Color.White,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    Headline(
+                        modifier = Modifier.padding(start = 8.dp).weight(1f),
+                        style = TextStyle(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        maxLines = 1
+                    )
+                }
+
+                MediaView(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(vertical = 8.dp)
+                )
+
+                Body(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    style = TextStyle(fontSize = 14.sp),
+                    maxLines = 2
+                )
+
+                CallToAction(
+                    style = TextStyle(
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    modifier = Modifier
+                        .background(
+                            Color.Red,
+                            RoundedCornerShape(8.dp)
+                        )
+                        .fillMaxWidth()
+                        .padding(12.dp)
+                )
+            }
         }
     },
-    iosLayoutStyle = NativeAdLayoutStyle.FULLSCREEN
-)
-```
-
-### Hiển thị (Android only):
-
-```kotlin
-NativeAdLayout(
-    adUiState = nativeAdState.uiState,
-    modifier = modifier,
-    content = {
-        Column {
-            Headline(modifier = Modifier.fillMaxWidth())
-            MediaView(modifier = Modifier.size(200.dp))
-            Body(modifier = Modifier.fillMaxWidth())
-            CallToAction(modifier = Modifier.fillMaxWidth())
-        }
-    },
+    iosLayoutStyle = {
+        AdNativeCustom(adUiState = nativeAdState.uiState, modifier = Modifier)
+    }
 )
 ```
 
 **Các thành phần Native Ad:**
-
 - `Headline()` - Tiêu đề
 - `Body()` - Nội dung
 - `MediaView()` - Hình ảnh/video
@@ -150,67 +235,80 @@ NativeAdLayout(
 @Composable
 fun NativeAdExample() {
     val nativeAdState = rememberNativeAdState()
+    val loadedOptions = remember { mutableSetOf<Int>() }
     
     LaunchedEffect(Unit) {
         nativeAdState.loadAd()
     }
     
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        elevation = 4.dp
-    ) {
-            PlatformAwareNativeAd(
-                adUiState = nativeAdState.uiState,
-                androidContent = {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row {
-                            MediaView(
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                            )
-                            
-                            Spacer(modifier = Modifier.width(12.dp))
-                            
-                            Column(modifier = Modifier.weight(1f)) {
-                                Headline(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    maxLines = 2
-                                )
-                                
-                                Spacer(modifier = Modifier.height(4.dp))
-                                
-                                Body(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    maxLines = 3
-                                )
+    Column {
+        // Radio buttons để demo load ads
+        listOf("Option 1", "Option 2", "Option 3").forEachIndexed { index, text ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+                    .selectable(
+                        selected = selectedOption == index,
+                        onClick = {
+                            if (!loadedOptions.contains(index)) {
+                                loadedOptions.add(index)
+                                nativeAdState.reset()
+                                nativeAdState.loadAd()
                             }
                         }
-                        
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        CallToAction(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(40.dp)
-                        )
-                    }
-                },
-                iosLayoutStyle = NativeAdLayoutStyle.FULLSCREEN
-            )
+                    )
+            ) {
+                Text(text)
+            }
+        }
+        
+        // Reload button
+        Button(
+            onClick = {
+                nativeAdState.reset()
+                nativeAdState.loadAd()
+            }
+        ) {
+            Text("Reload Ads")
+        }
+        
+        // Ad status debug
+        Text(
+            text = when {
+                nativeAdState.uiState.shouldShowShimmer -> "Loading..."
+                nativeAdState.uiState.shouldShowError -> "Error: ${nativeAdState.uiState.errorMessage}"
+                nativeAdState.uiState.shouldShowAd -> "Loaded Successfully"
+                else -> "Empty/Idle"
+            }
+        )
+        
+        // Hiển thị native ad
+        if (nativeAdState.uiState.shouldShowAd || nativeAdState.uiState.shouldShowShimmer) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(250.dp)
+                    .background(Color.LightGray.copy(alpha = 0.1f))
+                    .padding(8.dp)
+            ) {
+                CrossPlatformNativeAd(nativeAdState)
+            }
         }
     }
+}
 ```
 
 ## 4. Interstitial Ad (Fullscreen)
 
-### Load ad:
+### Load ad trực tiếp:
 
 ```kotlin
+import com.apero.sdk.ads.kmp.api.KmpAdmobAdapter
+import com.apero.sdk.ads.kmp.api.adunit.AdUnitId.INTERSTITIAL_DEFAULT
+
 scope.launch {
-    val result = KmpAdmobAdapter.loadInterstitialAd(AdUnitId.INTERSTITIAL_DEFAULT)
+    val result = KmpAdmobAdapter.loadInterstitialAd(INTERSTITIAL_DEFAULT)
     result.fold(
         onSuccess = { adResult ->
             // Lưu adResult để show sau
@@ -226,20 +324,22 @@ scope.launch {
 ### Show ad:
 
 ```kotlin
+import com.apero.ads.sdk.adapter.api.callback.AdFullScreenShowCallback
+
 KmpAdmobAdapter.showInterstitialAd(
     adResult = interstitialAdResult,
-    callback = object : InterstitialAdShowCallback {
+    callback = object : AdFullScreenShowCallback() {
         override fun onAdImpression() {
             println("Ad hiển thị")
         }
         
-        override fun onAdClose() {
+        override fun onAdClosed() {
             println("Ad đóng")
             interstitialAdResult = null  // Clear sau khi dùng
         }
         
-        override fun onAdShowFailed(adError: AdError) {
-            println("Show failed: ${adError.message}")
+        override fun onAdFailedToShow(error: AdError) {
+            println("Show failed: ${error.error}")
         }
         
         override fun onAdClicked() {
@@ -253,81 +353,22 @@ KmpAdmobAdapter.showInterstitialAd(
 )
 ```
 
-### Ví dụ hoàn chỉnh Interstitial Ad:
-
-```kotlin
-class InterstitialAdManager {
-    private var interstitialAdResult: InterstitialAdResult? = null
-    private val scope = CoroutineScope(Dispatchers.Main)
-    
-    fun loadAd() {
-        scope.launch {
-            val result = KmpAdmobAdapter.loadInterstitialAd(AdUnitId.INTERSTITIAL_DEFAULT)
-            result.fold(
-                onSuccess = { adResult ->
-                    interstitialAdResult = adResult
-                    println("Interstitial ad loaded successfully")
-                },
-                onFailure = { exception ->
-                    println("Failed to load interstitial ad: ${exception.message}")
-                }
-            )
-        }
-    }
-    
-    fun showAd(onAdClosed: () -> Unit) {
-        interstitialAdResult?.let { ad ->
-            KmpAdmobAdapter.showInterstitialAd(
-                ad,
-                object : InterstitialAdShowCallback {
-                    override fun onAdImpression() {
-                        println("Interstitial ad impression")
-                    }
-                    
-                    override fun onAdClose() {
-                        println("Interstitial ad closed")
-                        interstitialAdResult = null
-                        onAdClosed()
-                    }
-                    
-                    override fun onAdShowFailed(adError: AdError) {
-                        println("Interstitial ad show failed: ${adError.message}")
-                        interstitialAdResult = null
-                        onAdClosed()
-                    }
-                    
-                    override fun onAdClicked() {
-                        println("Interstitial ad clicked")
-                    }
-                    
-                    override fun onNextAction() {
-                        println("Interstitial ad next action")
-                    }
-                }
-            )
-        } ?: run {
-            println("No interstitial ad loaded")
-            onAdClosed()
-        }
-    }
-    
-    fun isAdReady(): Boolean {
-        return interstitialAdResult != null
-    }
-}
-```
-
 ## 4.1. Interstitial Ad Preload (Nâng cao)
 
 **Preload giúp ads load sẵn trong background, hiển thị nhanh hơn khi cần thiết.**
 
 ### Import:
 
+```kotlin
+import com.apero.sdk.ads.kmp.api.integrate.preload.InterstitialAdmobPreloader
+import com.apero.ads.sdk.adapter.api.interstitial.InterstitialAdRequest
+```
+
 ### Preload ad:
 
 ```kotlin
 val preloadKey = "splash_interstitial" // Key duy nhất cho placement
-val request = InterstitialAdRequest(AdUnitId.INTERSTITIAL_DEFAULT)
+val request = InterstitialAdRequest(INTERSTITIAL_DEFAULT)
 
 try {
     InterstitialAdmobPreloader.preloadAd(preloadKey, request)
@@ -337,25 +378,108 @@ try {
 }
 ```
 
-### Kiểm tra ad có sẵn:
+### Lấy ad preload:
 
 ```kotlin
-val isAvailable = InterstitialAdmobPreloader.isAdAvailable(preloadKey)
-// Kết quả: Boolean
+val adResult = InterstitialAdmobPreloader.getOrAwaitAd(preloadKey)
+if (adResult != null) {
+    KmpAdmobAdapter.showInterstitialAd(
+        adResult,
+        object : AdFullScreenShowCallback() {
+            override fun onAdClosed() {
+                super.onAdClosed()
+                onNavigateToMain() // Hành động sau khi ad đóng
+            }
+            
+            override fun onAdFailedToShow(error: AdError) {
+                super.onAdFailedToShow(error)
+                onNavigateToMain() // Fallback nếu show failed
+            }
+        }
+    )
+} else {
+    println("No preloaded interstitial ad available")
+    onNavigateToMain() // Fallback
+}
 ```
 
-### Lấy ad preload ngay lập tức:
+### Ví dụ hoàn chỉnh Interstitial Ad Preload:
 
 ```kotlin
-val preloadedAd = InterstitialAdmobPreloader.popBufferedAd(preloadKey)
-// Kết quả: InterstitialAdResult? (null nếu chưa load xong)
+@Composable
+fun SplashScreen(onNavigateToMain: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    val preloadKey = "inter_splash"
+    
+    // Load banner ad và preload interstitial khi ads được khởi tạo
+    LaunchedEffect(isAdsInitialized) {
+        if (isAdsInitialized) {
+            // Preload interstitial ad cho splash
+            try {
+                val request = InterstitialAdRequest(INTERSTITIAL_DEFAULT)
+                InterstitialAdmobPreloader.preloadAd(preloadKey, request)
+                println("Interstitial ad preload started for splash")
+            } catch (e: Exception) {
+                println("Failed to preload interstitial ad: ${e.message}")
+            }
+        }
+    }
+    
+    // Navigate sau 5 giây và show interstitial
+    LaunchedEffect(Unit) {
+        delay(5000)
+        scope.launch {
+            try {
+                val adResult = InterstitialAdmobPreloader.getOrAwaitAd(preloadKey)
+                if (adResult != null) {
+                    KmpAdmobAdapter.showInterstitialAd(
+                        adResult,
+                        object : AdFullScreenShowCallback() {
+                            override fun onAdClosed() {
+                                super.onAdClosed()
+                                onNavigateToMain()
+                            }
+                            
+                            override fun onAdFailedToShow(error: AdError) {
+                                super.onAdFailedToShow(error)
+                                onNavigateToMain()
+                            }
+                        }
+                    )
+                } else {
+                    onNavigateToMain()
+                }
+            } catch (e: Exception) {
+                onNavigateToMain()
+            }
+        }
+    }
+    
+    // UI content...
+}
+```
 
-if (preloadedAd != null) {
-    // Show ad ngay
-    KmpAdmobAdapter.showInterstitialAd(preloadedAd, callback)
-} else {
-    // Load ad thường
-    val result = KmpAdmobAdapter.loadInterstitialAd(AdUnitId.INTERSTITIAL_DEFAULT)
+## 5. Native Ad Preload
+
+### Import:
+
+```kotlin
+import com.apero.sdk.ads.kmp.api.integrate.preload.NativeAdmobPreloader
+import com.apero.ads.sdk.adapter.api.nativead.NativeAdRequest
+import com.apero.sdk.ads.kmp.api.adunit.AdUnitId.NATIVE_DEFAULT
+```
+
+### Preload:
+
+```kotlin
+val preloadKey = "native_ad_page_1"
+val request = NativeAdRequest(NATIVE_DEFAULT)
+
+try {
+    NativeAdmobPreloader.preloadAd(preloadKey, request)
+    println("Started preloading native ad")
+} catch (e: Exception) {
+    println("Failed to preload native ad: ${e.message}")
 }
 ```
 
@@ -364,676 +488,216 @@ if (preloadedAd != null) {
 ```kotlin
 scope.launch {
     try {
-        val adResult = InterstitialAdmobPreloader.awaitAd(
-            preloadKey, 
-            timeoutMs = 5000L  // Timeout sau 5 giây
-        )
-        
+        val adResult = NativeAdmobPreloader.getOrAwaitAd(preloadKey)
         if (adResult != null) {
-            KmpAdmobAdapter.showInterstitialAd(adResult, callback)
+            println("Native ad preload completed successfully")
+            updatePreloadState(preloadKey, true)
         } else {
-            println("Timeout hoặc load failed")
+            println("Native ad preload failed - no result")
+            updatePreloadState(preloadKey, false)
         }
     } catch (e: Exception) {
-        println("Lỗi await: ${e.message}")
+        println("Failed to preload native ad: ${e.message}")
+        updatePreloadState(preloadKey, false)
     }
-}
-```
-### Các phương thức Preloader:
-
-| Phương thức | Mô tả | Kết quả |
-|-------------|-------|---------|
-| `preloadAd(key, request)` | Bắt đầu preload | Void |
-| `isAdAvailable(key)` | Kiểm tra có ad sẵn | Boolean |
-| `popBufferedAd(key)` | Lấy ad ngay (xóa khỏi buffer) | InterstitialAdResult? |
-| `awaitAd(key, timeout)` | Chờ ad load xong | InterstitialAdResult? |
-
-**Lưu ý:**
-
-- Một preloadKey chỉ chứa được 1 ad
-- `popBufferedAd` sẽ xóa ad khỏi buffer sau khi lấy
-- `awaitAd` sẽ chờ đến khi load xong hoặc timeout
-- Nên preload trước 3-5 giây so với khi cần show
-
-## 5. Rewarded Ad
-
-### Load ad:
-
-```kotlin
-scope.launch {
-    val result = KmpAdmobAdapter.loadRewardAd(AdUnitId.REWARDED_DEFAULT)
-    result.fold(
-        onSuccess = { adResult ->
-            rewardAdResult = adResult
-        },
-        onFailure = { exception ->
-            println("Load reward ad failed: ${exception.message}")
-        }
-    )
-}
-```
-
-### Show ad:
-
-```kotlin
-KmpAdmobAdapter.showRewardAd(
-    adResult = rewardAdResult,
-    callback = object : RewardAdShowCallback {
-        override fun onUserEarnedReward(amount: Int, type: String) {
-            println("User nhận được: $amount $type")
-            // Thưởng cho user tại đây
-        }
-        
-        override fun onAdClose() {
-            println("Reward ad đóng")
-            rewardAdResult = null
-        }
-        
-        override fun onAdImpression() {
-            println("Reward ad hiển thị")
-        }
-        
-        override fun onAdShowFailed(adError: AdError) {
-            println("Show reward ad failed: ${adError.message}")
-            rewardAdResult = null
-        }
-        
-        override fun onAdClicked() {
-            println("Reward ad clicked")
-        }
-        
-        override fun onNextAction() {
-            println("Reward ad next action")
-        }
-    }
-)
-```
-
-### Ví dụ hoàn chỉnh Rewarded Ad:
-
-```kotlin
-class RewardAdManager {
-    private var rewardAdResult: RewardAdResult? = null
-    private val scope = CoroutineScope(Dispatchers.Main)
-    
-    fun loadAd() {
-        scope.launch {
-            val result = KmpAdmobAdapter.loadRewardAd(AdUnitId.REWARDED_DEFAULT)
-            result.fold(
-                onSuccess = { adResult ->
-                    rewardAdResult = adResult
-                    println("Reward ad loaded successfully")
-                },
-                onFailure = { exception ->
-                    println("Failed to load reward ad: ${exception.message}")
-                }
-            )
-        }
-    }
-    
-    fun showAd(onRewardEarned: (Int, String) -> Unit, onAdClosed: () -> Unit) {
-        rewardAdResult?.let { ad ->
-            KmpAdmobAdapter.showRewardAd(
-                ad,
-                object : RewardAdShowCallback {
-                    override fun onUserEarnedReward(amount: Int, type: String) {
-                        println("User earned reward: $amount $type")
-                        onRewardEarned(amount, type)
-                    }
-                    
-                    override fun onAdClose() {
-                        println("Reward ad closed")
-                        rewardAdResult = null
-                        onAdClosed()
-                    }
-                    
-                    override fun onAdImpression() {
-                        println("Reward ad impression")
-                    }
-                    
-                    override fun onAdShowFailed(adError: AdError) {
-                        println("Reward ad show failed: ${adError.message}")
-                        rewardAdResult = null
-                        onAdClosed()
-                    }
-                    
-                    override fun onAdClicked() {
-                        println("Reward ad clicked")
-                    }
-                    
-                    override fun onNextAction() {
-                        println("Reward ad next action")
-                    }
-                }
-            )
-        } ?: run {
-            println("No reward ad loaded")
-            onAdClosed()
-        }
-    }
-    
-    fun isAdReady(): Boolean {
-        return rewardAdResult != null
-    }
-}
-
-// Sử dụng trong UI
-@Composable
-fun RewardButton() {
-    val rewardManager = remember { RewardAdManager() }
-    var coins by remember { mutableStateOf(0) }
-    
-    LaunchedEffect(Unit) {
-        rewardManager.loadAd()
-    }
-    
-    Button(
-        onClick = {
-            rewardManager.showAd(
-                onRewardEarned = { amount, type ->
-                    coins += amount
-                },
-                onAdClosed = {
-                    // Load ad mới cho lần sau
-                    rewardManager.loadAd()
-                }
-            )
-        },
-        enabled = rewardManager.isAdReady()
-    ) {
-        Text("Watch Ad for Coins")
-    }
-    
-    Text("Coins: $coins")
-}
-```
-
-## 6. Native Ad Preload
-
-### Import:
-
-### Preload:
-
-```kotlin
-NativeAdmobPreloader.preloadAd(
-    placementId = "my_placement",
-    request = NativeAdRequest(AdUnitId.NATIVE_DEFAULT)
-)
-```
-
-### Kiểm tra có ad:
-
-```kotlin
-val hasAd = NativeAdmobPreloader.isAdAvailable("my_placement")
-// Kết quả: Boolean
-```
-
-### Lấy ad đã preload:
-
-```kotlin
-val preloadedAd = NativeAdmobPreloader.popBufferedAd("my_placement")
-// Kết quả: NativeAdResult? (null nếu không có)
-```
-
-### Chờ ad preload:
-
-```kotlin
-val awaitedAd = NativeAdmobPreloader.awaitAd("my_placement", 5000L)
-// Kết quả: NativeAdResult? (timeout sau 5 giây)
-```
-
-### Sử dụng preloaded ad:
-
-```kotlin
-val preloadedAd = NativeAdmobPreloader.popBufferedAd("my_placement")
-if (preloadedAd != null) {
-    nativeAdState.setPreloadedAd(preloadedAd)
-} else {
-    nativeAdState.loadAd()  // Fallback
 }
 ```
 
 ### Ví dụ hoàn chỉnh Native Ad Preload:
 
 ```kotlin
-class NativeAdPreloadManager {
-    private val placementKey = "home_native_ad"
-    
-    fun preloadAd() {
-        val request = NativeAdRequest(AdUnitId.NATIVE_DEFAULT)
-        NativeAdmobPreloader.preloadAd(placementKey, request)
-        println("Started preloading native ad")
-    }
-    
-    suspend fun getPreloadedAd(): NativeAdResult? {
-        // Chờ tối đa 3 giây
-        return NativeAdmobPreloader.awaitAd(placementKey, 3000L)
-    }
-    
-    fun getAdImmediately(): NativeAdResult? {
-        return NativeAdmobPreloader.popBufferedAd(placementKey)
-    }
-    
-    fun isAdReady(): Boolean {
-        return NativeAdmobPreloader.isAdAvailable(placementKey)
-    }
-}
-
 @Composable
-fun PreloadedNativeAdScreen() {
-    val nativeAdState = rememberNativeAdState()
-    val preloadManager = remember { NativeAdPreloadManager() }
+fun ViewPagerScreen(onNavigateBack: () -> Unit) {
+    val pagerState = rememberPagerState(pageCount = { 6 })
     val scope = rememberCoroutineScope()
     
-    LaunchedEffect(Unit) {
-        // Preload ad khi vào màn hình
-        preloadManager.preloadAd()
-        
-        // Chờ ad load xong
-        scope.launch {
-            val preloadedAd = preloadManager.getPreloadedAd()
-            if (preloadedAd != null) {
-                nativeAdState.setPreloadedAd(preloadedAd)
-            } else {
-                // Fallback load ad thường
-                nativeAdState.loadAd()
-            }
+    // Preload keys cho các native ads khác nhau
+    val preloadKey1 = "native_ad_page_1"
+    val preloadKey2 = "native_ad_page_2"
+    
+    // State để track preload status
+    var preloadStates by remember { mutableStateOf(mapOf<String, Boolean>()) }
+    
+    // Function để update preload state
+    val updatePreloadState = { key: String, isLoaded: Boolean ->
+        preloadStates = preloadStates.toMutableMap().apply {
+            put(key, isLoaded)
         }
     }
     
-    // UI hiển thị native ad
-    if (nativeAdState.uiState.shouldShowAd) {
-        PlatformAwareNativeAd(
-            adUiState = nativeAdState.uiState,
-            androidContent = {
-                // Layout native ad
-            },
-            iosLayoutStyle = NativeAdLayoutStyle.FULLSCREEN
-        )
-    }
-}
-```
-
-## 7. App Open Ad
-
-### Load ad:
-
-```kotlin
-scope.launch {
-    val result = KmpAdmobAdapter.loadAppOpenAd(AdUnitId.APP_OPEN_DEFAULT)
-    result.fold(
-        onSuccess = { adResult ->
-            appOpenAdResult = adResult
-        },
-        onFailure = { exception ->
-            println("Load app open ad failed: ${exception.message}")
-        }
-    )
-}
-```
-
-### Show ad:
-
-```kotlin
-KmpAdmobAdapter.showAppOpenAd(
-    adResult = appOpenAdResult,
-    callback = object : AppOpenAdShowCallback {
-        override fun onAdImpression() {
-            println("App open ad impression")
-        }
-        
-        override fun onAdClose() {
-            println("App open ad closed")
-            appOpenAdResult = null
-        }
-        
-        override fun onAdShowFailed(adError: AdError) {
-            println("App open ad show failed: ${adError.message}")
-            appOpenAdResult = null
-        }
-        
-        override fun onAdClicked() {
-            println("App open ad clicked")
-        }
-        
-        override fun onNextAction() {
-            println("App open ad next action")
-        }
-    }
-)
-```
-
-### Ví dụ hoàn chỉnh App Open Ad:
-
-```kotlin
-class AppOpenAdManager {
-    private var appOpenAdResult: AppOpenAdResult? = null
-    private val scope = CoroutineScope(Dispatchers.Main)
-    private var isShowingAd = false
-    private var loadTime: Long = 0
-    
-    fun loadAd() {
-        // Không load nếu đang show ad
-        if (isShowingAd) return
-        
-        scope.launch {
-            val result = KmpAdmobAdapter.loadAppOpenAd(AdUnitId.APP_OPEN_DEFAULT)
-            result.fold(
-                onSuccess = { adResult ->
-                    appOpenAdResult = adResult
-                    loadTime = System.currentTimeMillis()
-                    println("App open ad loaded successfully")
-                },
-                onFailure = { exception ->
-                    println("Failed to load app open ad: ${exception.message}")
-                }
-            )
-        }
-    }
-    
-    fun showAdIfAvailable(onAdClosed: () -> Unit) {
-        // Kiểm tra ad có sẵn và không quá cũ (4 giờ)
-        if (!isAdAvailable()) {
-            onAdClosed()
-            return
-        }
-        
-        isShowingAd = true
-        
-        appOpenAdResult?.let { ad ->
-            KmpAdmobAdapter.showAppOpenAd(
-                ad,
-                object : AppOpenAdShowCallback {
-                    override fun onAdImpression() {
-                        println("App open ad impression")
-                    }
-                    
-                    override fun onAdClose() {
-                        println("App open ad closed")
-                        appOpenAdResult = null
-                        isShowingAd = false
-                        onAdClosed()
-                        
-                        // Preload ad mới
-                        loadAd()
-                    }
-                    
-                    override fun onAdShowFailed(adError: AdError) {
-                        println("App open ad show failed: ${adError.message}")
-                        appOpenAdResult = null
-                        isShowingAd = false
-                        onAdClosed()
-                    }
-                    
-                    override fun onAdClicked() {
-                        println("App open ad clicked")
-                    }
-                    
-                    override fun onNextAction() {
-                        println("App open ad next action")
-                    }
-                }
-            )
-        } ?: onAdClosed()
-    }
-    
-    private fun isAdAvailable(): Boolean {
-        return appOpenAdResult != null && 
-               !isShowingAd && 
-               (System.currentTimeMillis() - loadTime) < (4 * 60 * 60 * 1000) // 4 giờ
-    }
-}
-
-// Sử dụng trong Application
-class MyApplication {
-    private val appOpenAdManager = AppOpenAdManager()
-    
-    fun onCreate() {
-        // Load app open ad khi app khởi động
-        appOpenAdManager.loadAd()
-    }
-    
-    fun onAppForegrounded() {
-        // Show app open ad khi app được mở lại
-        appOpenAdManager.showAdIfAvailable {
-            println("App open ad finished or not available")
-        }
-    }
-}
-```
-
-## 8. Ad Unit IDs có sẵn
-
-```kotlin
-AdUnitId.BANNER_DEFAULT
-AdUnitId.NATIVE_DEFAULT  
-AdUnitId.INTERSTITIAL_DEFAULT
-AdUnitId.REWARDED_DEFAULT
-AdUnitId.REWARDED_INTERSTITIAL_DEFAULT
-AdUnitId.APP_OPEN_DEFAULT
-```
-
-## 9. Ví dụ tổng hợp - App hoàn chỉnh
-
-```kotlin
-class AdsManager {
-    // Interstitial
-    private var interstitialAd: InterstitialAdResult? = null
-    
-    // Rewarded
-    private var rewardAd: RewardAdResult? = null
-    
-    // App Open
-    private var appOpenAd: AppOpenAdResult? = null
-    
-    private val scope = CoroutineScope(Dispatchers.Main)
-    
-    suspend fun initialize(): Boolean {
-        val result = KmpAdmobAdapter.asyncInitialize()
-        if (result.isSuccess) {
-            loadAllAds()
-            return true
-        }
-        return false
-    }
-    
-    private fun loadAllAds() {
-        loadInterstitial()
-        loadReward()
-        loadAppOpen()
-    }
-    
-    private fun loadInterstitial() {
-        scope.launch {
-            val result = KmpAdmobAdapter.loadInterstitialAd(AdUnitId.INTERSTITIAL_DEFAULT)
-            result.fold(
-                onSuccess = { interstitialAd = it },
-                onFailure = { println("Load interstitial failed: ${it.message}") }
-            )
-        }
-    }
-    
-    private fun loadReward() {
-        scope.launch {
-            val result = KmpAdmobAdapter.loadRewardAd(AdUnitId.REWARDED_DEFAULT)
-            result.fold(
-                onSuccess = { rewardAd = it },
-                onFailure = { println("Load reward failed: ${it.message}") }
-            )
-        }
-    }
-    
-    private fun loadAppOpen() {
-        scope.launch {
-            val result = KmpAdmobAdapter.loadAppOpenAd(AdUnitId.APP_OPEN_DEFAULT)
-            result.fold(
-                onSuccess = { appOpenAd = it },
-                onFailure = { println("Load app open failed: ${it.message}") }
-            )
-        }
-    }
-    
-    fun showInterstitial(onClosed: () -> Unit) {
-        interstitialAd?.let { ad ->
-            KmpAdmobAdapter.showInterstitialAd(ad, object : InterstitialAdShowCallback {
-                override fun onAdClose() {
-                    interstitialAd = null
-                    onClosed()
-                    loadInterstitial() // Preload cho lần sau
-                }
-                override fun onAdShowFailed(adError: AdError) {
-                    interstitialAd = null
-                    onClosed()
-                }
-                override fun onAdImpression() {}
-                override fun onAdClicked() {}
-                override fun onNextAction() {}
-            })
-        } ?: onClosed()
-    }
-    
-    fun showReward(onReward: (Int, String) -> Unit, onClosed: () -> Unit) {
-        rewardAd?.let { ad ->
-            KmpAdmobAdapter.showRewardAd(ad, object : RewardAdShowCallback {
-                override fun onUserEarnedReward(amount: Int, type: String) {
-                    onReward(amount, type)
-                }
-                override fun onAdClose() {
-                    rewardAd = null
-                    onClosed()
-                    loadReward() // Preload cho lần sau
-                }
-                override fun onAdShowFailed(adError: AdError) {
-                    rewardAd = null
-                    onClosed()
-                }
-                override fun onAdImpression() {}
-                override fun onAdClicked() {}
-                override fun onNextAction() {}
-            })
-        } ?: onClosed()
-    }
-    
-    fun showAppOpen(onClosed: () -> Unit) {
-        appOpenAd?.let { ad ->
-            KmpAdmobAdapter.showAppOpenAd(ad, object : AppOpenAdShowCallback {
-                override fun onAdClose() {
-                    appOpenAd = null
-                    onClosed()
-                    loadAppOpen() // Preload cho lần sau
-                }
-                override fun onAdShowFailed(adError: AdError) {
-                    appOpenAd = null
-                    onClosed()
-                }
-                override fun onAdImpression() {}
-                override fun onAdClicked() {}
-                override fun onNextAction() {}
-            })
-        } ?: onClosed()
-    }
-    
-    fun isInterstitialReady() = interstitialAd != null
-    fun isRewardReady() = rewardAd != null
-    fun isAppOpenReady() = appOpenAd != null
-}
-
-@Composable
-fun MainScreen() {
-    val adsManager = remember { AdsManager() }
-    val bannerState = rememberBannerAdState()
-    val nativeState = rememberNativeAdState()
-    var coins by remember { mutableStateOf(100) }
-    
-    LaunchedEffect(Unit) {
-        adsManager.initialize()
-        bannerState.loadAd()
-        nativeState.loadAd()
-    }
-    
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Coins: $coins", fontSize = 24.sp)
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Reward Button
-        Button(
-            onClick = {
-                adsManager.showReward(
-                    onReward = { amount, type ->
-                        coins += amount
-                    },
-                    onClosed = {}
-                )
-            },
-            enabled = adsManager.isRewardReady()
-        ) {
-            Text("Watch Ad for Coins")
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Interstitial Button
-        Button(
-            onClick = {
-                adsManager.showInterstitial {
-                    println("Interstitial closed")
-                }
-            },
-            enabled = adsManager.isInterstitialReady()
-        ) {
-            Text("Show Interstitial")
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Native Ad
-        if (nativeState.uiState.shouldShowAd) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                elevation = 4.dp
-            ) {
-                PlatformAwareNativeAd(
-                    adUiState = nativeState.uiState,
-                    androidContent = {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Headline(modifier = Modifier.fillMaxWidth())
-                            Spacer(modifier = Modifier.height(8.dp))
-                            MediaView(modifier = Modifier.size(200.dp))
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Body(modifier = Modifier.fillMaxWidth())
-                            Spacer(modifier = Modifier.height(8.dp))
-                            CallToAction(modifier = Modifier.fillMaxWidth())
+    // Preload logic dựa trên current page
+    LaunchedEffect(pagerState.currentPage) {
+        when (pagerState.currentPage) {
+            0 -> {
+                // On Screen A, preload first native ad
+                if (preloadStates[preloadKey1] != true) {
+                    scope.launch {
+                        try {
+                            println("Starting preload for native ad 1 from Screen A")
+                            val request = NativeAdRequest(NATIVE_DEFAULT)
+                            NativeAdmobPreloader.preloadAd(preloadKey1, request)
+                            
+                            // Wait for the ad to be actually loaded
+                            val adResult = NativeAdmobPreloader.getOrAwaitAd(preloadKey1)
+                            if (adResult != null) {
+                                println("Native ad 1 preload completed successfully")
+                                updatePreloadState(preloadKey1, true)
+                            } else {
+                                println("Native ad 1 preload failed - no result")
+                                updatePreloadState(preloadKey1, false)
+                            }
+                        } catch (e: Exception) {
+                            println("Failed to preload native ad 1: ${e.message}")
+                            updatePreloadState(preloadKey1, false)
                         }
-                    },
-                    iosLayoutStyle = NativeAdLayoutStyle.FULLSCREEN
-                )
+                    }
+                }
+            }
+            
+            2 -> {
+                // On Screen B, preload second native ad
+                if (preloadStates[preloadKey2] != true) {
+                    scope.launch {
+                        try {
+                            println("Starting preload for native ad 2 from Screen B")
+                            val request = NativeAdRequest(NATIVE_DEFAULT)
+                            NativeAdmobPreloader.preloadAd(preloadKey2, request)
+                            
+                            // Wait for the ad to be actually loaded
+                            val adResult = NativeAdmobPreloader.getOrAwaitAd(preloadKey2)
+                            if (adResult != null) {
+                                println("Native ad 2 preload completed successfully")
+                                updatePreloadState(preloadKey2, true)
+                            } else {
+                                println("Native ad 2 preload failed - no result")
+                                updatePreloadState(preloadKey2, false)
+                            }
+                        } catch (e: Exception) {
+                            println("Failed to preload native ad 2: ${e.message}")
+                            updatePreloadState(preloadKey2, false)
+                        }
+                    }
+                }
             }
         }
-        
-        Spacer(modifier = Modifier.weight(1f))
-        
-        // Banner Ad
-        BannerAdLayout(
-            adUiState = bannerState.uiState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(60.dp),
-            adSize = AdSize.BANNER
-        )
+    }
+    
+    // UI content...
+}
+```
+
+## 6. Ad Unit IDs có sẵn
+
+```kotlin
+import com.apero.sdk.ads.kmp.api.adunit.AdUnitId
+
+// Banner Ads
+AdUnitId.BANNER_DEFAULT
+
+// Interstitial Ads  
+AdUnitId.INTERSTITIAL_DEFAULT
+
+// Native Ads
+AdUnitId.NATIVE_DEFAULT
+```
+
+## 7. Error Handling
+
+SDK cung cấp error handling tự động thông qua uiState:
+
+```kotlin
+// Kiểm tra trạng thái ads
+when {
+    adState.uiState.shouldShowShimmer -> {
+        // Đang loading
+        Text("Loading...")
+    }
+    adState.uiState.shouldShowError -> {
+        // Có lỗi, hiển thị message
+        Text("Error: ${adState.uiState.errorMessage}")
+    }
+    adState.uiState.shouldShowAd -> {
+        // Hiển thị ad
+        AdComponent(adState)
+    }
+    else -> {
+        // Empty/Idle state
+        Text("No ad available")
     }
 }
 ```
 
-## Lưu ý quan trọng:
-- **Kiểm tra `isInitialized`** trước khi load
-- **Banner/Native** dùng Compose State
-- **Interstitial/Reward/AppOpen** dùng callback pattern
-- **Preload** giúp ads load nhanh hơn, nên dùng cho các màn hình quan trọng
-- **Luôn có fallback** khi ads load thất bại
-- **Preload lại ads** sau khi show để sẵn sàng cho lần sau
+## 8. Platform-specific Implementation
+
+### Android
+- Sử dụng Compose UI
+- Tích hợp với AdMob SDK
+- Hỗ trợ Material Design
+
+### iOS
+- Sử dụng SwiftUI thông qua KMP
+- Tích hợp với Google Mobile Ads SDK
+- Hỗ trợ iOS native components thông qua `AdNativeCustom`
+
+## 9. Build và Run
+
+### Yêu cầu
+- Kotlin 1.8+
+- Android Studio Hedgehog | 2023.1.1+
+- Xcode 15.0+
+- iOS 13.0+
+- Android API 21+
+
+### Build Android
+```bash
+./gradlew :sampleKmpApp:assembleDebug
+```
+
+### Build iOS
+```bash
+./gradlew :sampleKmpApp:iosSimulatorArm64Framework
+```
+
+## 10. Dependencies
+
+```kotlin
+dependencies {
+    implementation(project(":common-ads-sdk-admob"))
+    implementation(compose.runtime)
+    implementation(compose.foundation)
+    implementation(compose.material)
+    implementation(compose.ui)
+}
+```
+
+## 11. Best Practices
+
+1. **Khởi tạo SDK sớm**: Khởi tạo trong SplashScreen hoặc MainActivity
+2. **Preload ads**: Sử dụng preloading để giảm thời gian chờ
+3. **Error handling**: Luôn xử lý lỗi và fallback gracefully
+4. **Memory management**: Reset ad states khi không cần thiết
+5. **User experience**: Không hiển thị quá nhiều ads cùng lúc
+6. **State management**: Sử dụng `reset()` trước khi load ads mới
+
+## 12. Troubleshooting
+
+### Ads không load
+- Kiểm tra internet connection
+- Verify Ad Unit IDs
+- Check AdMob account status
+- Review console logs
+
+### Build errors
+- Clean project và rebuild
+- Sync Gradle files
+- Check Kotlin version compatibility
+
+## 13. Support
+
+- **Documentation**: [Apero Ads SDK Docs](https://docs.apero.com)
+- **Issues**: [GitHub Issues](https://github.com/apero/ads-sdk/issues)
+- **Email**: support@apero.com
+
+## License
+
+Copyright © 2024 Apero. All rights reserved.

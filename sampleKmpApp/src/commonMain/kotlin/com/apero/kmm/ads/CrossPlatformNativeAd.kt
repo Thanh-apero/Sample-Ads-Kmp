@@ -20,11 +20,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.apero.kmm.ads.nativead.AdNativeCustom
 import com.apero.sdk.ads.kmp.api.composable.Body
 import com.apero.sdk.ads.kmp.api.composable.CallToAction
 import com.apero.sdk.ads.kmp.api.composable.Headline
 import com.apero.sdk.ads.kmp.api.composable.MediaView
-import com.apero.sdk.ads.kmp.api.composable.NativeAdLayoutStyle
+import com.apero.sdk.ads.kmp.api.composable.NativeAdLayout
 import com.apero.sdk.ads.kmp.api.composable.NativeAdState
 import com.apero.sdk.ads.kmp.api.composable.PlatformAwareNativeAd
 
@@ -99,6 +100,8 @@ fun CrossPlatformNativeAd(nativeAdState: NativeAdState) {
                 }
             }
         },
-        iosLayoutStyle = NativeAdLayoutStyle.FULLSCREEN
+        iosLayoutStyle = {
+            AdNativeCustom(adUiState = nativeAdState.uiState, modifier = Modifier)
+        }
     )
 }

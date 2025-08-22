@@ -11,7 +11,6 @@ import com.apero.sdk.ads.kmp.api.KmpAdmobAdapter
 fun App() {
     val navigationManager = remember { NavigationManager() }
     var isAdsInitialized by remember { mutableStateOf(false) }
-
     // Auto-initialize ads when app starts
     LaunchedEffect(Unit) {
         try {

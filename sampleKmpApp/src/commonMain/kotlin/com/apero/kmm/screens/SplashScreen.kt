@@ -17,10 +17,11 @@ import androidx.compose.ui.unit.sp
 import com.apero.sdk.ads.kmp.api.composable.*
 import kotlinx.coroutines.delay
 import androidx.compose.animation.core.*
-import com.apero.sdk.ads.kmp.api.callback.InterstitialAdShowCallback
-import com.apero.sdk.ads.kmp.api.error.AdError
+import com.apero.ads.sdk.adapter.api.callback.AdFullScreenShowCallback
+import com.apero.ads.sdk.adapter.api.error.AdError
 import com.apero.sdk.ads.kmp.api.integrate.preload.InterstitialAdmobPreloader
 import com.apero.ads.sdk.adapter.api.interstitial.InterstitialAdRequest
+import com.apero.ads.sdk.adapter.api.interstitial.InterstitialAdShowCallback
 import com.apero.sdk.ads.kmp.api.adunit.AdUnitId.INTERSTITIAL_DEFAULT
 import com.apero.sdk.ads.kmp.api.KmpAdmobAdapter
 import kotlinx.coroutines.CoroutineScope
@@ -34,7 +35,7 @@ fun SplashScreen(
 ) {
     val bannerAdState = rememberBannerAdState()
     val scope = rememberCoroutineScope()
-    
+
     // Add a state to control when animation starts
     var startAnimation by remember { mutableStateOf(false) }
     val preloadKey = "inter_splash"
@@ -73,19 +74,20 @@ fun SplashScreen(
     // Navigate after 8 seconds and show interstitial
     LaunchedEffect(Unit) {
         delay(5000)
-            scope.launch {
-                try {
-                    val adResult = InterstitialAdmobPreloader.awaitAd(preloadKey)
-                    if (adResult != null) {
-                        KmpAdmobAdapter.showInterstitialAd(
-                            adResult,
-                            object : InterstitialAdShowCallback {
-                                override fun onAdImpression() {
-                                    println("Splash interstitial ad impression")
-                                }
+        scope.launch {
+            try {
+                val adResult = InterstitialAdmobPreloader.getOrAwaitAd(preloadKey)
+                if (adResult != null) {
+                    KmpAdmobAdapter.showInterstitialAd(
+                        adResult,
+                        object : AdFullScreenShowCallback() {
+                            override fun onAdImpression() {
+                                println("Splash interstitial ad impression")
+                            }
 
-                            override fun onAdShowFailed(adError: AdError) {
-                                println("Splash interstitial ad show failed: ${adError.message}")
+                            override fun onAdFailedToShow(error: AdError) {
+                                super.onAdFailedToShow(error)
+                                println("Splash interstitial ad show failed: ${error.error}")
                                 onNavigateToMain()
                             }
 
@@ -93,8 +95,8 @@ fun SplashScreen(
                                 println("Splash interstitial ad clicked")
                             }
 
-                            override fun onAdClose() {
-                                println("Splash interstitial ad closed")
+                            override fun onAdClosed() {
+                                super.onAdClosed()
                                 onNavigateToMain()
                             }
 
@@ -102,15 +104,15 @@ fun SplashScreen(
                                 println("Splash interstitial ad next action")
                             }
                         })
-                    } else {
-                        println("No preloaded interstitial ad available")
-                        onNavigateToMain()
-                    }
-                } catch (e: Exception) {
-                    println("Error showing preloaded interstitial ad: ${e.message}")
+                } else {
+                    println("No preloaded interstitial ad available")
                     onNavigateToMain()
                 }
+            } catch (e: Exception) {
+                println("Error showing preloaded interstitial ad: ${e.message}")
+                onNavigateToMain()
             }
+        }
     }
 
     Box(

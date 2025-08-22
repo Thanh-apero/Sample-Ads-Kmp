@@ -11,7 +11,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.apero.kmm.ads.CrossPlatformNativeAd
@@ -21,28 +23,39 @@ import com.apero.sdk.ads.kmp.api.composable.*
 fun MainScreen(
     onNavigateToScreenA: () -> Unit
 ) {
-    var selectedOption by remember { mutableStateOf(1) } // Start with Vietnamese selected (index 1)
+    var selectedOption by remember { mutableStateOf(-1) } // Start with no selection
     val nativeAdState = rememberNativeAdState()
     val loadedOptions = remember { mutableSetOf<Int>() }
 
-    // Language options with flag emojis and names
-    val languageOptions = listOf(
-        "🇬🇧" to "English",
-        "🇻🇳" to "Vietnamese",
-        "🇮🇳" to "हिंदी",
-        "🇧🇷" to "Português (Brasil)",
-        "🇪🇸" to "Español",
-        "🇮🇩" to "Indonesian"
-    )
+    val radioOptions = listOf("Option 1", "Option 2", "Option 3")
 
     LaunchedEffect(Unit) {
         nativeAdState.loadAd()
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Main Screen") },
+                backgroundColor = MaterialTheme.colors.primary,
+                actions = {
+                    IconButton(
+                        onClick = onNavigateToScreenA
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Done - Start ViewPager Flow",
+                            tint = Color.White
+                        )
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(paddingValues)
         ) {
             // Main content area
             Column(
@@ -51,32 +64,15 @@ fun MainScreen(
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
+                Text(
+                    text = "Select an option:",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
 
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "Chọn ngôn ngữ",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        modifier = Modifier.align(Alignment.CenterVertically)
-                    )
-                    IconButton(
-                        onClick = onNavigateToScreenA,
-                        modifier = Modifier.align(Alignment.CenterVertically)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Check"
-                        )
-                    }
-                }
-
-                // Language options
-                languageOptions.forEachIndexed { index, (flag, language) ->
+                // Radio buttons
+                radioOptions.forEachIndexed { index, text ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -99,9 +95,11 @@ fun MainScreen(
                                     }
                                 }
                             ),
-                        elevation = 2.dp,
-                        backgroundColor = Color.White,
-                        shape = RoundedCornerShape(12.dp)
+                        elevation = if (selectedOption == index) 8.dp else 2.dp,
+                        backgroundColor = if (selectedOption == index)
+                            MaterialTheme.colors.primary.copy(alpha = 0.1f)
+                        else
+                            Color.White
                     ) {
                         Row(
                             modifier = Modifier
@@ -109,60 +107,75 @@ fun MainScreen(
                                 .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Flag emoji
-                            Text(
-                                text = flag,
-                                fontSize = 24.sp,
-                                modifier = Modifier.padding(end = 12.dp)
+                            RadioButton(
+                                selected = selectedOption == index,
+                                onClick = null,
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = MaterialTheme.colors.primary
+                                )
                             )
-
-                            // Language name
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = language,
+                                text = text,
                                 fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.Black,
-                                modifier = Modifier.weight(1f)
+                                fontWeight = if (selectedOption == index)
+                                    FontWeight.Bold
+                                else
+                                    FontWeight.Normal
                             )
-
-                            // Selection indicator
-                            if (selectedOption == index) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Selected",
-                                    tint = Color(0xFF2196F3), // Blue color
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            } else {
-                                Box(
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .background(
-                                            Color.Gray.copy(alpha = 0.3f),
-                                            shape = androidx.compose.foundation.shape.CircleShape
-                                        )
-                                )
-                            }
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
+
+                // Button để reload ads
+                Button(
+                    onClick = {
+                        nativeAdState.reset()
+                        nativeAdState.loadAd()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Reload Ads")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Hiển thị trạng thái ads để debug
+                Text(
+                    text = buildString {
+                        append("Ads Status: ")
+                        when {
+                            nativeAdState.uiState.shouldShowShimmer -> append("Loading...")
+                            nativeAdState.uiState.shouldShowError -> append("Error: ${nativeAdState.uiState.errorMessage}")
+                            nativeAdState.uiState.shouldShowAd -> append("Loaded Successfully")
+                            else -> append("Empty/Idle")
+                        }
+                    },
+                    fontSize = 12.sp,
+                    color = when {
+                        nativeAdState.uiState.shouldShowShimmer -> Color.Blue
+                        nativeAdState.uiState.shouldShowError -> Color.Red
+                        nativeAdState.uiState.shouldShowAd -> Color.Green
+                        else -> Color.Gray
+                    },
+                    modifier = Modifier.padding(8.dp)
+                )
             }
 
-            // Ad section
             if (nativeAdState.uiState.shouldShowAd || nativeAdState.uiState.shouldShowShimmer) {
-                Card(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp)
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    elevation = 4.dp,
-                    shape = RoundedCornerShape(12.dp)
+                        .height(250.dp)
+                        .background(Color.LightGray.copy(alpha = 0.1f))
+                        .padding(8.dp)
                 ) {
                     CrossPlatformNativeAd(nativeAdState)
                 }
             }
+
         }
     }
 }
